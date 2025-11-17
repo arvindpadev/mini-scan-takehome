@@ -50,15 +50,17 @@ func NewBigTableStore(projectId *string, instanceId *string) Store {
 
 /***
 * Since BigTable does not support optimistic locking, we attempt to
-* use the timestamp column for optimistic locking purposes. The 2
+* use the timestamp column for optimistic locking purposes. The
 * attempts are not for the purposes of a retry strategy per se. If
 * the optimistic lock condition fails on the off chance that an
 * older timestamp than the current one, but newer than the one read
 * in the ReadRow invocation caused this, it would be nice to quickly
 * reattempt instead of placing an avoidable upstream burden by NACK-ing
-* the message from the pubsub based on the error encountered. This
-* minor optimization should help when there are a high number of updates
-* coming in for the same key, likely when overall traffic is bursty
+* the message from the pubsub based on the error encountered. The more
+* common case is that the second ReadRow invocation finds that this change
+* is no longer needed. This minor optimization should help when there are
+* a high number of updates coming in for the same key, likely when overall
+* traffic is bursty
  */
 func optimisticLockingLikeMutateWithRetry(ctx context.Context, table *bigtable.Table, key string, timestampFilter bigtable.Filter, timestampReadOption bigtable.ReadOption, scan *StorableScan) error {
 	var previousAttemptError error
